@@ -2,9 +2,10 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
 const tokenGen = require('../config/createToken');
-const {sendVerficationEmail, sendFogotPasswordEmail} = require('../config/sendEmail');
+const { sendVerficationEmail, sendFogotPasswordEmail } = require('../config/sendEmail');
 
 
+//register controller
 const registerController = async (req, res) => {
     const { name, email, password } = req.body;
 
@@ -56,6 +57,8 @@ const registerController = async (req, res) => {
 }
 
 
+
+//login controller
 const loginController = async (req, res) => {
     const { email, password } = req.body
     if (!email || !password) {
@@ -76,14 +79,16 @@ const loginController = async (req, res) => {
 
     //generate token with user info
     const token = tokenGen({ email: oldUser.email, _id: oldUser._id })
- 
+
     //sending response
     res.status(200).json({ success: true, token, msg: "login successfully" })
 }
 
 
-const fogetPassController = async(req,res) => {
-    const {email} = req.body;
+
+//forget password controller
+const fogetPassController = async (req, res) => {
+    const { email } = req.body;
     if (!email) {
         return res.status(400).json({ success: false, msg: "Please enter valid email" })
     }
@@ -103,7 +108,7 @@ const fogetPassController = async(req,res) => {
     const token = tokenGen({ email: oldUser.email })
 
     //send mail verfication
-    const link = "http://" + req.hostname + ":3001/api/auth/resetpassword?token=" + token;
+    const link = "http://" + req.hostname + ":3001/api/auth/verifyToken?token=" + token;
 
     const sendMail = await sendFogotPasswordEmail(oldUser.email, link)
     if (sendMail) {
@@ -113,4 +118,33 @@ const fogetPassController = async(req,res) => {
     }
 }
 
-module.exports = { registerController, loginController, fogetPassController }
+
+
+// reset password controller
+const resetPasswordController = async (req, res) => {
+    const { newPassword, confirmPassword } = req.body
+    if (!newPassword || !confirmPassword) {
+        return res.status(404).json({ success: false, msg: "please enter valid password !" })
+    }
+
+    if (newPassword !== confirmPassword) {
+        return res.status(404).json({ success: false, msg: "please enter correct password !" })
+    }
+
+    //encrypt the newpassword
+    bcrypt.genSalt(12, (err, salt) => {
+        bcrypt.hash(newPassword, salt, async (err, hash) => {
+            const hashPassword = hash;
+
+            const updatePassword = await User.findOneAndUpdate({ $set: { password: hashPassword } })
+            if (updatePassword) {
+                res.status(200).send({ success: true, msg: "Reset password Successfully !" })
+            }else {
+                res.status(500).send({ success: true, msg: "something went wrong !" })
+            }
+        })
+    })
+}
+
+
+module.exports = { registerController, loginController, fogetPassController, resetPasswordController }
