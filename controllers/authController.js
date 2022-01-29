@@ -1,6 +1,10 @@
 const bcrypt = require('bcryptjs');
-const secret = 'QFK4PLDZ10AN6';
 const User = require('../models/User');
+
+const tokenGen = require('../config/createToken');
+
+const emailSender = require('../config/sendEmail');
+const sendEmail = require('../config/sendEmail');
 
 const registerController = async (req, res) => {
     const { name, email, password } = req.body;
@@ -23,7 +27,7 @@ const registerController = async (req, res) => {
     }
 
     bcrypt.genSalt(12, (err, salt) => {
-        bcrypt.hash(password, salt, (err, hash) => {
+        bcrypt.hash(password, salt, async(err, hash) => {
             const hashPassword = hash;
             const newUser = new User({
                 name,
@@ -31,8 +35,20 @@ const registerController = async (req, res) => {
                 password: hashPassword,
             })
 
-            newUser.save();
-            res.status(201).json({ success: true, msg: "Registered success" });
+            await newUser.save();
+
+            //generate token
+            const token = tokenGen({email:newUser.email})
+
+            //send mail verfication
+            const link = "http://"+req.hostname+":3001/api/email/verify?token="+token;
+
+            const sendMail = await emailSender(newUser.email,link)
+            if (sendMail){
+                res.status(201).json({ success: true, msg: "Registered success, but email is not verified" });
+            }else {
+                res.status(201).json({ success: true, msg: "Registered success" });
+            }
         })
     })
 
