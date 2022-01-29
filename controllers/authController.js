@@ -138,9 +138,9 @@ const resetPasswordController = async (req, res) => {
 
             const updatePassword = await User.findOneAndUpdate({ $set: { password: hashPassword } })
             if (updatePassword) {
-                res.status(200).send({ success: true, msg: "Reset password Successfully !" })
+                res.status(200).json({ success: true, msg: "Reset password Successfully !" })
             }else {
-                res.status(500).send({ success: true, msg: "something went wrong !" })
+                res.status(500).json({ success: true, msg: "something went wrong !" })
             }
         })
     })

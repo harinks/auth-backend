@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 
 //require apis
 const authAPI = require('./apis/authApi')
+const emailAPI = require('./apis/emailApi')
 //connect to database
 const dbConnect = require('./config/dbConnect');
 dbConnect();
@@ -25,6 +26,7 @@ app.get('/', function(req, res){
 
 //apis
 app.use('/api/auth', authAPI)
+app.use('/api/email', emailAPI)
 
 
 //port
