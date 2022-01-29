@@ -2,8 +2,8 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
 const tokenGen = require('../config/createToken');
+const {sendVerficationEmail, sendFogotPasswordEmail} = require('../config/sendEmail');
 
-const emailSender = require('../config/sendEmail');
 
 const registerController = async (req, res) => {
     const { name, email, password } = req.body;
@@ -44,7 +44,7 @@ const registerController = async (req, res) => {
             //send mail verfication
             const link = "http://" + req.hostname + ":3001/api/email/verify?token=" + token;
 
-            const sendMail = await emailSender(newUser.email, link)
+            const sendMail = await sendVerficationEmail(newUser.email, link)
             if (sendMail) {
                 res.status(201).json({ success: true, msg: "Registered success, but email is not verified" });
             } else {
@@ -54,6 +54,7 @@ const registerController = async (req, res) => {
     })
 
 }
+
 
 const loginController = async (req, res) => {
     const { email, password } = req.body
@@ -80,4 +81,36 @@ const loginController = async (req, res) => {
     res.status(200).json({ success: true, token, msg: "login successfully" })
 }
 
-module.exports = { registerController, loginController }
+
+const fogetPassController = async(req,res) => {
+    const {email} = req.body;
+    if (!email) {
+        return res.status(400).json({ success: false, msg: "Please enter valid email" })
+    }
+
+    if (!/^\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,3}$/.test(email)) {
+        return res.status(400).json({ success: false, msg: "please enter valid email !" })
+    }
+
+    //user is present or not
+    const oldUser = await User.findOne({ email });
+    if (!oldUser) {
+        return res.status(404).json({ success: false, msg: "User is not found !" })
+    }
+
+    //send forgot password email
+    //generate token
+    const token = tokenGen({ email: oldUser.email })
+
+    //send mail verfication
+    const link = "http://" + req.hostname + ":3001/api/auth/resetpassword?token=" + token;
+
+    const sendMail = await sendFogotPasswordEmail(oldUser.email, link)
+    if (sendMail) {
+        res.status(201).json({ success: true, msg: "error in sending email !" });
+    } else {
+        res.status(200).json({ success: true, msg: "Email sent !" });
+    }
+}
+
+module.exports = { registerController, loginController, fogetPassController }
